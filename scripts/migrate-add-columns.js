@@ -8,15 +8,21 @@ const { neon } = require('@neondatabase/serverless')
 const DATABASE_URL = process.env.DATABASE_URL
 
 if (!DATABASE_URL) {
-  console.error('❌ DATABASE_URL not found in .env.local')
+  console.error('❌ DATABASE_URL not found!')
+  console.error('Please create .env.local file with:')
+  console.error('DATABASE_URL=postgresql://...')
+  console.error('\nYou can get it from: https://console.neon.tech/app/projects')
   process.exit(1)
 }
+
+console.log('✅ Database URL found')
+console.log('🔄 Connecting to database...')
 
 const sql = neon(DATABASE_URL)
 
 async function runMigration() {
   try {
-    console.log('🔄 Starting database migration...')
+    console.log('🔄 Starting database migration...\n')
     
     const columns = [
       { name: 'city', type: 'VARCHAR(100)' },
@@ -36,20 +42,26 @@ async function runMigration() {
         
         if (result.length === 0) {
           // Add column if it doesn't exist
-          await sql(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`)
-          console.log(`✅ Column '${col.name}' added`)
+          await sql`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`
+          console.log(`✅ Column '${col.name}' added successfully`)
         } else {
-          console.log(`ℹ️ Column '${col.name}' already exists`)
+          console.log(`ℹ️ Column '${col.name}' already exists - skipping`)
         }
       } catch (err) {
-        console.error(`❌ Error adding column '${col.name}':`, err.message)
+        console.error(`❌ Error with column '${col.name}':`, err.message)
       }
     }
 
-    console.log('\n✅ Migration completed!')
+    console.log('\n✅ Migration completed successfully!')
     process.exit(0)
   } catch (error) {
-    console.error('❌ Migration failed:', error)
+    console.error('\n❌ Database connection error:')
+    console.error('Error:', error.message)
+    console.error('\nMake sure:')
+    console.error('1. .env.local file exists')
+    console.error('2. DATABASE_URL is set correctly')
+    console.error('3. You have a Neon database account')
+    console.error('4. Your DATABASE_URL is from https://console.neon.tech')
     process.exit(1)
   }
 }

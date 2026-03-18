@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "node src/lib/db-setup.js",
-    "migrate": "node scripts/migrate-add-columns.js"
+    "migrate": "node scripts/migrate-add-columns.js",
+    "test:db": "node scripts/test-db-connection.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
@@ -16,6 +17,7 @@
     "@neondatabase/serverless": "^0.9.0",
     "bcryptjs": "^2.4.3",
     "cookies-next": "^4.2.1",
+    "dotenv": "^17.3.1",
     "edge-tts-universal": "^1.4.0",
     "framer-motion": "^12.35.2",
     "groq-sdk": "^1.1.1",
