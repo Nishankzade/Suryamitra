@@ -51,3 +51,8 @@ build/
 # Archive/backup files
 **/*.zip
 ../suryamitra.zip
+
+# Test files (don't deploy to production)
+test_*.ts
+test_*.js
+test_*.tsx
