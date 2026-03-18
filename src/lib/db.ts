@@ -25,7 +25,11 @@ export async function setupDatabase() {
       mobile      VARCHAR(15),
       age         INTEGER,                      -- user's age
       state       VARCHAR(50),                  -- user's state for personalized schemes
+      city        VARCHAR(100),                 -- user's city
       occupation  VARCHAR(50),                  -- farmer, homeowner, student, etc.
+      roof_size   VARCHAR(100),                 -- size of roof for solar (e.g., "500 sq ft")
+      energy_needs VARCHAR(255),                -- energy requirements (e.g., "5 kW daily")
+      additional_info TEXT,                     -- any additional user information
       created_at  TIMESTAMP DEFAULT NOW(),
       updated_at  TIMESTAMP DEFAULT NOW()
     )
