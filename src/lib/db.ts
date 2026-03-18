@@ -177,7 +177,7 @@ export async function createUser(
 // Get user by ID
 export async function getUserById(userId: string) {
   const result = await sql`
-    SELECT id, name, email, mobile, age, state, occupation, created_at
+    SELECT id, name, email, mobile, age, state, city, occupation, roof_size, energy_needs, additional_info, created_at
     FROM users 
     WHERE id = ${userId} 
     LIMIT 1
@@ -186,18 +186,71 @@ export async function getUserById(userId: string) {
 }
 
 // Update user name and age
-export async function updateUserProfile(userId: string, name?: string, age?: number) {
-  const updates = []
-  if (name !== undefined) updates.push(`name = ${name}`)
-  if (age !== undefined) updates.push(`age = ${age}`)
+export async function updateUserProfile(
+  userId: string, 
+  name?: string, 
+  age?: number,
+  state?: string,
+  city?: string,
+  occupation?: string,
+  roofSize?: string,
+  energyNeeds?: string,
+  additionalInfo?: string
+) {
+  const setClause: string[] = ['updated_at = NOW()']
+  const values: any[] = []
+  let paramIndex = 1
   
-  if (updates.length === 0) return null
+  if (name !== undefined) {
+    setClause.push(`name = $${paramIndex}`)
+    values.push(name)
+    paramIndex++
+  }
+  if (age !== undefined) {
+    setClause.push(`age = $${paramIndex}`)
+    values.push(age)
+    paramIndex++
+  }
+  if (state !== undefined) {
+    setClause.push(`state = $${paramIndex}`)
+    values.push(state)
+    paramIndex++
+  }
+  if (city !== undefined) {
+    setClause.push(`city = $${paramIndex}`)
+    values.push(city)
+    paramIndex++
+  }
+  if (occupation !== undefined) {
+    setClause.push(`occupation = $${paramIndex}`)
+    values.push(occupation)
+    paramIndex++
+  }
+  if (roofSize !== undefined) {
+    setClause.push(`roof_size = $${paramIndex}`)
+    values.push(roofSize)
+    paramIndex++
+  }
+  if (energyNeeds !== undefined) {
+    setClause.push(`energy_needs = $${paramIndex}`)
+    values.push(energyNeeds)
+    paramIndex++
+  }
+  if (additionalInfo !== undefined) {
+    setClause.push(`additional_info = $${paramIndex}`)
+    values.push(additionalInfo)
+    paramIndex++
+  }
+  
+  if (setClause.length === 1) return null // Only has updated_at
+  
+  values.push(userId)
   
   const result = await sql`
     UPDATE users 
-    SET ${updates.join(', ')}, updated_at = NOW()
+    SET ${setClause.join(', ')}
     WHERE id = ${userId}
-    RETURNING id, name, email, mobile, age, state, occupation
+    RETURNING id, name, email, mobile, age, state, city, occupation, roof_size, energy_needs, additional_info
   `
   return result[0] || null
 }

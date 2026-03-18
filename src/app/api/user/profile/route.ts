@@ -20,7 +20,7 @@ function getUserIdFromToken(request: NextRequest): string | null {
   }
 }
 
-// PUT - Update user profile (name, age)
+// PUT - Update user profile (name, age, state, city, occupation, roof_size, energy_needs, additionalInfo)
 export async function PUT(request: NextRequest) {
   try {
     const userId = getUserIdFromToken(request)
@@ -29,7 +29,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, age } = body
+    const { name, age, state, city, occupation, roofSize, energyNeeds, additionalInfo } = body
 
     // Validate age if provided
     if (age !== undefined && (age < 5 || age > 100)) {
@@ -40,7 +40,13 @@ export async function PUT(request: NextRequest) {
     const updatedUser = await updateUserProfile(
       userId, 
       name || undefined, 
-      age !== undefined ? Number(age) : undefined
+      age !== undefined ? Number(age) : undefined,
+      state || undefined,
+      city || undefined,
+      occupation || undefined,
+      roofSize || undefined,
+      energyNeeds || undefined,
+      additionalInfo || undefined
     )
 
     if (!updatedUser) {

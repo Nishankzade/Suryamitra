@@ -31,9 +31,58 @@ export async function addAgeColumn() {
   }
 }
 
+// Migration: Add new user profile columns
+export async function addUserProfileColumns() {
+  try {
+    console.log('🔄 Adding user profile columns...')
+    
+    const columnDefinitions = [
+      { name: 'city', type: 'VARCHAR(100)' },
+      { name: 'roof_size', type: 'VARCHAR(100)' },
+      { name: 'energy_needs', type: 'VARCHAR(255)' },
+      { name: 'additional_info', type: 'TEXT' },
+    ]
+
+    for (const col of columnDefinitions) {
+      const checkResult = await sql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = ${col.name}
+      `
+      
+      if (checkResult.length === 0) {
+        await sql`
+          ALTER TABLE users 
+          ADD COLUMN ${col.name} ${col.type}
+        `
+        console.log(`✅ Column '${col.name}' added successfully`)
+      } else {
+        console.log(`ℹ️ Column '${col.name}' already exists`)
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error adding profile columns:', error)
+    throw error
+  }
+}
+
+// Run all migrations
+export async function runAllMigrations() {
+  try {
+    console.log('🚀 Running all migrations...')
+    await addAgeColumn()
+    await addUserProfileColumns()
+    console.log('✅ All migrations completed successfully!')
+  } catch (error) {
+    console.error('❌ Migration failed:', error)
+    throw error
+  }
+}
+
 // Run migration if this file is executed directly
 if (require.main === module) {
-  addAgeColumn()
+  runAllMigrations()
     .then(() => {
       console.log('🎉 Migration completed successfully!')
       process.exit(0)
