@@ -760,8 +760,9 @@ export default function ChatPage() {
               // ── STREAMING TTS: detect completed sentences and speak them ──
               if (voicePrefsRef.current.autoSpeak && !isMutedRef.current) {
                 const unspoken = full.slice(spokenUpTo)
-                // Find the last sentence-ending punctuation
-                const sentenceEndMatch = unspoken.match(/^([\s\S]*?[.!?।])\s/)
+                // Find the last sentence-ending punctuation (handle Hindi danḍa, English, etc.)
+                // Make the trailing space optional to handle edge cases where stream hasn't sent it yet
+                const sentenceEndMatch = unspoken.match(/^([\s\S]*?[.!?।])\s*(?=\S|$)/)
                 if (sentenceEndMatch) {
                   const sentence = sentenceEndMatch[1].trim()
                   if (sentence.length > 5) { // Skip tiny fragments
