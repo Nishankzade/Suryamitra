@@ -1,0 +1,202 @@
+/* src/app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sun-yellow: #FFB800;
+  --sun-orange: #FF6B00;
+  --deep-sky:   #0A1628;
+  --surface:    #0F1E35;
+  --surface2:   #162440;
+  --border:     rgba(255, 184, 0, 0.22);
+  --text:       #F0F4FF;
+  --muted:      #8A9FBF;
+  --green:      #00E676;
+  --neon-cyan:  #00F5FF;
+  --neon-magenta: #FF00E5;
+}
+
+* { box-sizing: border-box; padding: 0; margin: 0; }
+
+html, body {
+  height: 100%;
+  background: linear-gradient(165deg, #0A1628 0%, #0D1B2D 40%, #0A1628 100%);
+  color: var(--text);
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .hidden-mobile { display: none !important; }
+  .show-mobile { display: flex !important; }
+}
+@media (min-width: 769px) {
+  .hidden-mobile { display: flex !important; }
+  .show-mobile { display: none !important; }
+}
+
+/* Chat layout responsive — hide mascot panel on small screens for more chat space */
+@media (max-width: 900px) {
+  .chat-mascot-panel { display: none !important; }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,184,0,0.4); }
+
+/* Input autofill override */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface2) inset;
+  -webkit-text-fill-color: var(--text);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ====================================================
+   FUTURISTIC SURYA MITRA MASCOT ANIMATIONS — 5 states
+   ==================================================== */
+
+/* IDLE — holographic float + subtle pulse */
+@keyframes mascot-idle-anim {
+  0%   { transform: translateY(0px) scale(1) rotate(0deg); filter: drop-shadow(0 0 12px rgba(255,184,0,0.4)); }
+  33%  { transform: translateY(-8px) scale(1.02) rotate(0.5deg); filter: drop-shadow(0 0 20px rgba(0,245,255,0.2)); }
+  66%  { transform: translateY(-12px) scale(0.99) rotate(-0.5deg); filter: drop-shadow(0 0 18px rgba(255,184,0,0.5)); }
+  100% { transform: translateY(0px) scale(1) rotate(0deg); filter: drop-shadow(0 0 12px rgba(255,184,0,0.4)); }
+}
+.mascot-idle {
+  animation: mascot-idle-anim 4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  transform-origin: center bottom;
+}
+
+/* LISTENING — active scan pulse + lean */
+@keyframes mascot-listen-anim {
+  0%   { transform: scale(1.02) rotate(-1deg); filter: drop-shadow(0 0 25px rgba(0,200,255,0.6)); }
+  50%  { transform: scale(1.08) rotate(1deg); filter: drop-shadow(0 0 35px rgba(0,245,255,0.8)); }
+  100% { transform: scale(1.02) rotate(-1deg); filter: drop-shadow(0 0 25px rgba(0,200,255,0.6)); }
+}
+.mascot-listen {
+  animation: mascot-listen-anim 0.7s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* THINKING — tech-style pendulum + data pulse */
+@keyframes mascot-think-anim {
+  0%   { transform: rotate(-6deg) translateY(-2px) scale(1); filter: drop-shadow(0 0 20px rgba(160,100,255,0.5)); }
+  100% { transform: rotate(6deg) translateY(-6px) scale(1.02); filter: drop-shadow(0 0 28px rgba(160,100,255,0.7)); }
+}
+.mascot-think {
+  animation: mascot-think-anim 0.8s cubic-bezier(0.37, 0, 0.63, 1) infinite alternate;
+  transform-origin: center bottom;
+}
+
+/* TALKING — dynamic holographic bob */
+@keyframes mascot-talk-anim {
+  0%   { transform: translateY(0px) scaleY(1) scaleX(1); filter: drop-shadow(0 0 22px rgba(255,107,0,0.7)); }
+  25%  { transform: translateY(-6px) scaleY(1.04) scaleX(1.01); filter: drop-shadow(0 0 30px rgba(255,184,0,0.9)); }
+  50%  { transform: translateY(-2px) scaleY(0.97) scaleX(0.99); filter: drop-shadow(0 0 18px rgba(255,107,0,0.6)); }
+  75%  { transform: translateY(-8px) scaleY(1.05) scaleX(1.02); filter: drop-shadow(0 0 32px rgba(255,184,0,0.85)); }
+  100% { transform: translateY(0px) scaleY(1) scaleX(1); filter: drop-shadow(0 0 22px rgba(255,107,0,0.7)); }
+}
+.mascot-talk {
+  animation: mascot-talk-anim 0.3s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+/* HAPPY — futuristic energy burst */
+@keyframes mascot-happy-anim {
+  0%   { transform: translateY(0px) scale(1) rotate(0deg); filter: drop-shadow(0 0 15px rgba(255,224,0,0.5)); }
+  15%  { transform: translateY(-20px) scale(1.1) rotate(-5deg); filter: drop-shadow(0 0 40px rgba(255,230,0,0.9)); }
+  30%  { transform: translateY(-10px) scale(1.05) rotate(3deg); filter: drop-shadow(0 0 35px rgba(255,184,0,0.8)); }
+  50%  { transform: translateY(-16px) scale(1.08) rotate(-3deg); filter: drop-shadow(0 0 38px rgba(255,200,0,0.85)); }
+  70%  { transform: translateY(-6px) scale(1.03) rotate(2deg); filter: drop-shadow(0 0 30px rgba(255,184,0,0.7)); }
+  85%  { transform: translateY(-12px) scale(1.06) rotate(-2deg); filter: drop-shadow(0 0 32px rgba(255,210,0,0.75)); }
+  100% { transform: translateY(0px) scale(1) rotate(0deg); filter: drop-shadow(0 0 15px rgba(255,224,0,0.5)); }
+}
+.mascot-happy {
+  animation: mascot-happy-anim 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  transform-origin: center bottom;
+}
+
+/* ====================================================
+   SHARED UI ANIMATIONS
+   ==================================================== */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-12px) rotate(1deg); }
+}
+@keyframes glowPulse {
+  0%   { opacity: 0.5; transform: scale(0.95); }
+  100% { opacity: 1;   transform: scale(1.05); }
+}
+@keyframes sonar {
+  0%   { transform: scale(0.5); opacity: 0.7; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+@keyframes thinkDot {
+  0%, 100% { opacity: 0.3; transform: scale(0.7); }
+  50%       { opacity: 1;   transform: scale(1); }
+}
+@keyframes sparkle {
+  0%   { opacity: 0.4; transform: scale(0.8) rotate(-10deg); }
+  100% { opacity: 1;   transform: scale(1.2) rotate(10deg); }
+}
+@keyframes rayRotate {
+  from { transform: rotate(0deg); opacity: 0.8; }
+  to   { transform: rotate(360deg); opacity: 1; }
+}
+@keyframes holographicRing {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.05); }
+}
+@keyframes dataStream {
+  0%   { stroke-dashoffset: 100; opacity: 0.3; }
+  50%  { opacity: 0.8; }
+  100% { stroke-dashoffset: 0; opacity: 0.3; }
+}
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.6; }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(255,107,0,0.3); }
+  50%       { box-shadow: 0 0 28px rgba(255,107,0,0.7); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes barBounce {
+  0%   { transform: scaleY(0.25); }
+  100% { transform: scaleY(1); }
+}
+@keyframes typingDot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30%            { transform: translateY(-7px); opacity: 1; }
+}
+@keyframes spin-slow {
+  to { transform: translateX(-50%) rotate(360deg); }
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translate(-50%, 40px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes messageAppear {
+  from { opacity: 0; transform: scale(0.92) translateY(15px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Utility classes */
+.animate-float    { animation: float 3s ease-in-out infinite; }
+.animate-slide-up { animation: slideUp 0.5s ease both; }
+.animate-fade-in  { animation: fadeIn 0.4s ease both; }
+.animate-msg      { animation: messageAppear 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) both; }
