@@ -5,6 +5,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyPassword, createToken, validateEmail } from '@/lib/auth'
 import { getUserByEmail } from '@/lib/db'
 
+// Force dynamic rendering to avoid static generation issues
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

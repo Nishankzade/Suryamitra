@@ -4,6 +4,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 
+// Force dynamic rendering to avoid static generation issues
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
     const token = request.cookies.get('suryamitra_token')?.value
 
