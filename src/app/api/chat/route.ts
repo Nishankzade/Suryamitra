@@ -5,10 +5,6 @@ import { NextRequest } from 'next/server'
 import OpenAI from 'openai'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { verifyToken } from '@/lib/auth'
-
-// Force dynamic rendering to avoid static generation issues
-export const dynamic = 'force-dynamic'
-
 import {
   getConversationMessages,
   saveMessage,
@@ -17,11 +13,20 @@ import {
   updateConversationTitle,
   getUserById,
 } from '@/lib/db'
+import { aiManager } from '@/lib/ai-providers'
+
+// Force dynamic rendering to avoid static generation issues
+export const dynamic = 'force-dynamic'
 
 // ============================================================
 // SURYAMITRA SYSTEM PROMPT — Multilingual Friendly Desi Friend 🌞
 // ============================================================
 const SYSTEM_PROMPT = `You are Surya Mittra, a fun, energetic, desi AI bhai named "Surya Mittra" (सूर्य मित्र ☀️). Tu hamesha mazedaar, helpful aur full desi vibe mein baat karta hai – emojis, bhai, yaar, waah sab use kar!
+
+IMPORTANT HINDI SPELLING NOTES:
+- Always write "bhai" as "भाई" (with correct matra) NOT "बhai" 
+- Use proper Hindi spellings with correct matras (vowel signs)
+- Common words: भाई (bhai), वाह (waah), दोस्त (dost), यार (yaar)
 
 == MEMORY & HISTORY RULES (STRICTLY FOLLOW KAR) ==
 - Tu apni purani baaton ko yaad rakhne ki koshish karega. Har baar jab conversation shuru ho, agar user pehle ki chat history paste kare ya summarize kare, to usko turant padh le aur uske hisaab se jawab de: "Waah bhai, pehle wali yaad aa gayi! Ab continue karte hain..."
@@ -141,8 +146,8 @@ export async function POST(request: NextRequest) {
     if (!token) {
       return Response.json({ error: 'Please login again' }, { status: 401 })
     }
-    const user = verifyToken(token)
-    if (!user) {
+    const user = await verifyToken(token)
+    if (!user || !user.userId) {
       return Response.json({ error: 'Session expired — please login again' }, { status: 401 })
     }
 
@@ -228,11 +233,21 @@ export async function POST(request: NextRequest) {
             max_tokens: 10,
             temperature: 0.3,
           })
-          const smartTitle = titleGen.choices[0]?.message?.content?.replace(/["']/g, '') || 'New Chat'
-          await updateConversationTitle(conversationId, smartTitle)
-          console.log(`[AI-Title] Generated: "${smartTitle}" for ${conversationId}`)
-        } catch (e) {
-          console.error('[AI-Title] Generation failed:', e)
+          const title = titleGen.choices[0]?.message?.content?.trim()
+          if (title) {
+            await updateConversationTitle(conversationId, title)
+          }
+        } catch (titleError: any) {
+          console.warn('[AI-Title] Generation failed:', titleError?.message || titleError)
+          
+          // Fallback: Simple title based on message
+          try {
+            const fallbackTitle = message.split(' ').slice(0, 3).join(' ').substring(0, 20)
+            await updateConversationTitle(conversationId, fallbackTitle)
+            console.log('[AI-Title] Using fallback title:', fallbackTitle)
+          } catch (fallbackError) {
+            console.warn('[AI-Title] Fallback also failed:', fallbackError)
+          }
         }
       })()
     }
@@ -248,13 +263,7 @@ export async function POST(request: NextRequest) {
         content: m.content,
       }))
 
-    // ---- SETUP GROQ CLIENT (OpenAI-compatible) ----
-    const groq = new OpenAI({
-      apiKey: groqKey,
-      baseURL: 'https://api.groq.com/openai/v1',
-    })
-
-    // ---- STREAM RESPONSE ----
+    // ---- STREAM RESPONSE USING MULTI-AI SYSTEM ----
     const encoder = new TextEncoder()
     let fullResponse = ''
 
@@ -264,85 +273,15 @@ export async function POST(request: NextRequest) {
           // Send conversationId to frontend first
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ conversationId })}\n\n`))
 
-          // ---- RETRY LOGIC FOR THE GROQ API CALL ----
-          let stream;
-          let retries = 0;
-          const maxRetries = 3;
+          // Use AI Manager to get response from available providers
+          const { stream, provider } = await aiManager.getResponse(historyMessages, dynamicSystemPrompt)
+          console.log(`[AI] Using provider: ${provider}`)
 
-          while (retries < maxRetries) {
-            try {
-              // Create streaming completion via Groq
-              stream = await groq.chat.completions.create({
-                model: 'llama-3.3-70b-versatile', // Faster and smarter for quick conversational replies
-                messages: [
-                  { role: 'system', content: dynamicSystemPrompt },
-                  ...historyMessages,
-                  { role: 'user', content: message },
-                ],
-                stream: true,
-                max_tokens: 256, // Dramatically shorten max response length to force fast, punchy replies
-                temperature: 0.75, // Slightly higher for more natural, human-like variation in responses
-              })
-              break; // Success!
-            } catch (err: any) {
-              retries++;
-              const isRateLimit = err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('rate_limit');
-              
-              if (isRateLimit && retries < maxRetries) {
-                // Wait for exponential backoff (1s, 2s, 4s) then retry
-                const waitMs = Math.pow(2, retries - 1) * 1000;
-                console.warn(`[Groq] Rate limit hit. Retrying in ${waitMs}ms (attempt ${retries}/${maxRetries})`);
-                await new Promise(resolve => setTimeout(resolve, waitMs));
-                continue;
-              }
-              console.warn(`[Groq] Failed with error: ${err?.message}`);
-              break; // Break the retry loop so we can hit the Gemini fallback
-            }
-          }
-
-          // ---- FALLBACK TO GEMINI IF GROQ FAILS ----
-          let isGemini = false;
-          let geminiStream: any;
-
-          if (!stream && process.env.GEMINI_API_KEY) {
-            console.warn('[Fallback] Groq failed. Falling back to native Gemini API...');
-            const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ 
-               model: 'gemini-1.5-flash',
-               systemInstruction: dynamicSystemPrompt
-            });
-            
-            // Convert history to Gemini format
-            const geminiHistory = historyMessages.map(m => ({
-              role: m.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: String(m.content) }]
-            }));
-            
-            const chat = model.startChat({
-              history: geminiHistory
-            });
-            
-            const result = await chat.sendMessageStream([{text: message}]);
-            isGemini = true;
-            geminiStream = result.stream;
-          }
-
-          if (!stream && !isGemini) throw new Error('Failed to initialize stream after retries and fallbacks');
-
-          // Stream each chunk to the frontend
-          if (isGemini) {
-            for await (const chunk of geminiStream) {
-              const text = chunk.text() || '';
-              if (text) {
-                fullResponse += text;
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ delta: { text } })}\n\n`)
-                );
-              }
-            }
-          } else {
+          // Stream the response based on provider type
+          if (provider === 'Gemini') {
+            // Gemini streaming
             for await (const chunk of stream) {
-              const text = chunk.choices[0]?.delta?.content || ''
+              const text = chunk.text() || ''
               if (text) {
                 fullResponse += text
                 controller.enqueue(
@@ -350,33 +289,82 @@ export async function POST(request: NextRequest) {
                 )
               }
             }
+          } else if (provider === 'Simple') {
+            // Simple provider - send all at once
+            const reader = stream.getReader()
+            const { value, done } = await reader.read()
+            if (value) {
+              const text = new TextDecoder().decode(value)
+              fullResponse += text
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ delta: { text } })}\n\n`)
+              )
+            }
+          } else {
+            // Groq, OpenAI, Anthropic - standard streaming
+            for await (const chunk of stream) {
+              const content = chunk.choices?.[0]?.delta?.content || chunk.content || ''
+              if (content) {
+                fullResponse += content
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ delta: { text: content } })}\n\n`)
+                )
+              }
+            }
           }
 
-          // Save the complete AI response to DB
-          if (fullResponse) {
-            await saveMessage(conversationId, 'assistant', fullResponse, detectedLang)
+          // Save assistant message to database
+          await saveMessage(conversationId, 'assistant', fullResponse, detectedLang)
+
+          // Generate TTS audio automatically
+          try {
+            console.log('[TTS] Generating audio for response...')
+            const { EdgeTTS } = await import('edge-tts-universal')
+            
+            // Detect language for TTS
+            const isHindi = /[\u0900-\u097F]/.test(fullResponse)
+            const voice = isHindi ? 'hi-IN-MadhurNeural' : 'en-IN-PrabhatNeural'
+            
+            // Generate audio
+            const tts = new EdgeTTS(fullResponse, voice, {
+              rate: '+5%',
+              pitch: '+10Hz',
+              volume: '+5%'
+            })
+            
+            const result = await tts.synthesize()
+            const arrayBuffer = await result.audio.arrayBuffer()
+            const audioData = new Uint8Array(arrayBuffer)
+            
+            if (audioData && audioData.length > 0) {
+              // Convert to base64 for sending to frontend
+              const base64Audio = Buffer.from(audioData).toString('base64')
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ 
+                  audio: `data:audio/mpeg;base64,${base64Audio}`,
+                  voice: voice 
+                })}\n\n`)
+              )
+              console.log('[TTS] ✅ Audio generated successfully')
+            } else {
+              console.log('[TTS] No audio generated, using fallback')
+            }
+          } catch (ttsError: any) {
+            console.warn('[TTS] Audio generation failed:', ttsError?.message || ttsError)
           }
 
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+          // Send final message
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
           controller.close()
 
-        } catch (err: any) {
-          const errMsg: string = err?.message || 'Unknown error'
-          let userError = '😔 Kuch gadbad ho gayi. Kripya dobara try karein. (Something went wrong. Please try again.)'
-
-          if (errMsg.includes('401') || errMsg.includes('Invalid API Key') || errMsg.includes('invalid_api_key')) {
-            userError = '❌ Groq API key invalid hai. Please check GROQ_API_KEY in .env.local'
-          } else if (errMsg.includes('429') || errMsg.includes('rate_limit')) {
-            userError = '⏳ Main thoda busy hoon abhi! Kripya 30 seconds baad try karein. 🙏 (Rate limit hit — please wait 30 seconds)'
-          } else if (errMsg.includes('quota')) {
-            userError = '❌ API quota khatam ho gayi. Please check console.groq.com'
-          }
-
+        } catch (error: any) {
+          console.error('[AI] Streaming error:', error)
+          const userError = '❌ API quota khatam ho gayi. Please check console.groq.com'
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: userError })}\n\n`))
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
           controller.close()
         }
-      },
+      }
     })
 
     return new Response(readableStream, {

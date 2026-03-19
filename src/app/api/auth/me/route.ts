@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ user: null }, { status: 401 })
     }
 
-    const payload = verifyToken(token)
+    const payload = await verifyToken(token)
     if (!payload) {
         // Token invalid or expired — clear it
         const response = NextResponse.json({ user: null }, { status: 401 })
@@ -22,5 +22,14 @@ export async function GET(request: NextRequest) {
         return response
     }
 
-    return NextResponse.json({ user: payload })
+    // Fetch full user data from database
+    try {
+        const { getUserById } = await import('@/lib/db')
+        const fullUser = await getUserById(payload.userId)
+        
+        return NextResponse.json({ user: fullUser })
+    } catch (error) {
+        console.error('Error fetching user data:', error)
+        return NextResponse.json({ user: payload }, { status: 200 })
+    }
 }

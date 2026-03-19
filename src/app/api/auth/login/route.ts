@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ---- CREATE JWT TOKEN ----
-    const token = createToken({
+    const token = await createToken({
       userId: user.id,
       email: user.email,
       name: user.name,
@@ -93,8 +93,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ user: null }, { status: 401 })
   }
 
-  const { verifyToken } = await import('@/lib/auth')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) {
     return NextResponse.json({ user: null }, { status: 401 })
   }

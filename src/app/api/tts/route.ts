@@ -27,6 +27,16 @@ const DEFAULT_VOICE = 'hi-IN-MadhurNeural'
 // ─── MAX TEXT LENGTH (to prevent abuse) ───────────────────────────────────────
 const MAX_TEXT_LENGTH = 5000
 
+// Simple language detection
+function detectLanguage(text: string): string {
+    const hindiChars = /[\u0900-\u097F]/.test(text)
+    const englishChars = /^[a-zA-Z\s]+$/.test(text)
+    
+    if (hindiChars) return 'hi'
+    if (englishChars) return 'en'
+    return 'en' // default
+}
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
@@ -64,6 +74,15 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await result.audio.arrayBuffer()
         const audioData = new Uint8Array(arrayBuffer)
 
+        if (!audioData || audioData.length === 0) {
+            console.warn('TTS: No audio generated, using fallback')
+            // Return a simple text response as fallback
+            return Response.json({ 
+                message: 'Audio generation failed. Here is the text: ' + text,
+                fallback: true 
+            }, { status: 200 })
+        }
+
         // Return as audio/mpeg
         return new Response(audioData, {
             headers: {
@@ -75,9 +94,9 @@ export async function POST(request: NextRequest) {
 
     } catch (error: any) {
         console.error('TTS Error:', error?.message || error)
-        return Response.json(
-            { error: 'Failed to generate speech. Please try again.' },
-            { status: 500 }
-        )
+        return Response.json({ 
+            error: 'TTS failed: ' + (error.message || 'Unknown error'),
+            fallback: 'Text-to-speech is temporarily unavailable'
+        }, { status: 500 })
     }
 }

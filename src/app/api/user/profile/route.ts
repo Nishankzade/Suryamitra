@@ -2,19 +2,26 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { updateUserProfile, getUserById } from '@/lib/db'
-import jwt from 'jsonwebtoken'
+import { jwtVerify } from 'jose'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET
+  if (!secret) return null
+  return new TextEncoder().encode(secret)
+}
 
 // Verify JWT token and get user ID
-function getUserIdFromToken(request: NextRequest): string | null {
+async function getUserIdFromToken(request: NextRequest): Promise<string | null> {
   try {
     const authHeader = request.headers.get('authorization')
     if (!authHeader?.startsWith('Bearer ')) return null
     
     const token = authHeader.slice(7)
-    const decoded = jwt.verify(token, JWT_SECRET) as any
-    return decoded.userId
+    const secret = getJwtSecret()
+    if (!secret) return null
+    
+    const { payload } = await jwtVerify(token, secret)
+    return (payload as any).userId
   } catch {
     return null
   }
@@ -23,7 +30,7 @@ function getUserIdFromToken(request: NextRequest): string | null {
 // PUT - Update user profile (name, age, state, city, occupation, roof_size, energy_needs, additionalInfo)
 export async function PUT(request: NextRequest) {
   try {
-    const userId = getUserIdFromToken(request)
+    const userId = await getUserIdFromToken(request)
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

@@ -554,7 +554,6 @@ export default function ChatPage() {
     streamingAbortRef.current = true
     if (audioRef.current) {
       audioRef.current.pause()
-      audioRef.current.currentTime = 0
       audioRef.current = null
     }
     // Clear queue — revoke URLs when fetches complete
@@ -566,6 +565,23 @@ export default function ChatPage() {
     setIsPlaying(false); setIsPaused(false)
     // Reset abort flag after a tick
     setTimeout(() => { streamingAbortRef.current = false }, 50)
+  }
+
+  // Play audio data from backend (base64 encoded)
+  function playAudioData(audioDataUrl: string) {
+    if (audioRef.current) {
+      audioRef.current.pause()
+    }
+    
+    try {
+      const audio = new Audio(audioDataUrl)
+      audioRef.current = audio
+      audio.play().catch(err => {
+        console.warn('[Audio] Playback failed:', err)
+      })
+    } catch (err) {
+      console.warn('[Audio] Failed to create audio element:', err)
+    }
   }
 
   function togglePauseResume() {
@@ -773,6 +789,12 @@ export default function ChatPage() {
                   }
                 }
               }
+            }
+
+            // ── AUTOMATIC BACKEND AUDIO ──
+            if (parsed.audio && voicePrefsRef.current.autoSpeak && !isMutedRef.current) {
+              console.log('[Audio] Playing backend-generated audio')
+              playAudioData(parsed.audio)
             }
           } catch { }
         }

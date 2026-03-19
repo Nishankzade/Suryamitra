@@ -1,17 +1,17 @@
 // src/lib/auth.ts
-// JWT token creation and verification
+// JWT token creation and verification - using jose for consistency
 
-import jwt from 'jsonwebtoken'
+import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
 
 const JWT_EXPIRES = '7d' // token valid for 7 days
 
-function getJwtSecret(): string {
+function getJwtSecret() {
   const secret = process.env.JWT_SECRET
   if (!secret) {
     throw new Error('JWT_SECRET is not configured')
   }
-  return secret
+  return new TextEncoder().encode(secret)
 }
 
 // ============================================================
@@ -42,14 +42,21 @@ export interface TokenPayload {
 }
 
 // Create JWT token after successful login
-export function createToken(payload: TokenPayload): string {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: JWT_EXPIRES })
+export async function createToken(payload: TokenPayload): Promise<string> {
+  const secret = getJwtSecret()
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(JWT_EXPIRES)
+    .sign(secret)
 }
 
 // Verify JWT token (used in middleware and API routes)
-export function verifyToken(token: string): TokenPayload | null {
+export async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
-    return jwt.verify(token, getJwtSecret()) as TokenPayload
+    const secret = getJwtSecret()
+    const { payload } = await jwtVerify(token, secret)
+    return payload as TokenPayload
   } catch {
     return null // token expired or invalid
   }
